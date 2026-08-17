@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import db from "./config/database";
+import authRoutes from "./routes/authRoutes";
 
 // Load variables from .env into process.env
 dotenv.config();
@@ -16,6 +17,8 @@ app.use(express.json());
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });
+
+app.use("/api/auth", authRoutes);
 
 async function testDatabaseConnection() {
   try {
