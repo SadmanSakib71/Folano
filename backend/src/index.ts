@@ -5,6 +5,7 @@ import db from "./config/database";
 import authRoutes from "./routes/authRoutes";
 import productRoutes from "./routes/productRoutes";
 import categoryRoutes from "./routes/categoryRoutes";
+import orderRoutes from "./routes/orderRoutes";
 
 // Load variables from .env into process.env
 dotenv.config();
@@ -23,6 +24,7 @@ app.get("/health", (_req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/categories", categoryRoutes);
+app.use("/api/orders", orderRoutes);
 
 async function testDatabaseConnection() {
   try {
