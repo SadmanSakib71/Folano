@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import db from "./config/database";
 import authRoutes from "./routes/authRoutes";
+import productRoutes from "./routes/productRoutes";
 
 // Load variables from .env into process.env
 dotenv.config();
@@ -19,6 +20,7 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/products", productRoutes);
 
 async function testDatabaseConnection() {
   try {
