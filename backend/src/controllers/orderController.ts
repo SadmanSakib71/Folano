@@ -288,6 +288,130 @@ export async function createOrder(req: Request, res: Response) {
   }
 }
 
+type PreorderBatchLockRow = {
+  id: number;
+  product_id: number;
+  total_quantity: string | number;
+  reserved_quantity: string | number;
+  price_per_unit: string | number;
+  expected_delivery_date: string | Date;
+  status: string;
+};
+
+export async function createPreorder(req: Request, res: Response) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const userId = req.user.id;
+    const { batch_id, quantity, address_text } = req.body;
+
+    if (batch_id === undefined || batch_id === null || batch_id === "") {
+      return res.status(400).json({ error: "batch_id is required" });
+    }
+
+    if (quantity === undefined || quantity === null || quantity === "") {
+      return res.status(400).json({ error: "quantity is required" });
+    }
+
+    if (typeof address_text !== "string" || address_text.trim() === "") {
+      return res.status(400).json({
+        error: "address_text is required and must be a non-empty string",
+      });
+    }
+
+    const batchId = toFiniteNumber(batch_id);
+    const parsedQuantity = toFiniteNumber(quantity);
+
+    if (batchId === null || !Number.isInteger(batchId) || batchId <= 0) {
+      return res.status(400).json({ error: "batch_id is invalid" });
+    }
+
+    if (parsedQuantity === null || parsedQuantity <= 0) {
+      return res.status(400).json({ error: "quantity must be greater than 0" });
+    }
+
+    const orderId = await db.transaction(async (trx) => {
+      // The preorder batch row is locked with SELECT ... FOR UPDATE.
+      // If two customers try to reserve the last available quantity at the same time,
+      // the first transaction locks the row and checks/updates reserved_quantity.
+      // The second transaction waits until the first transaction finishes, then reads
+      // the updated reserved_quantity.
+      // Therefore both customers cannot reserve the same remaining quantity.
+      const batch: PreorderBatchLockRow | undefined = await trx("preorder_batches")
+        .where({ id: batchId })
+        .forUpdate()
+        .first();
+
+      if (!batch) {
+        throw new OrderError(404, "Preorder batch not found");
+      }
+
+      if (batch.status !== "open") {
+        throw new OrderError(400, "Preorder batch is not open");
+      }
+
+      const availableQuantity =
+        Number(batch.total_quantity) - Number(batch.reserved_quantity);
+
+      if (availableQuantity < parsedQuantity) {
+        throw new OrderError(400, "Not enough quantity available");
+      }
+
+      const deliveryCharge = 100;
+      const subtotal = parsedQuantity * Number(batch.price_per_unit);
+      const totalAmount = deliveryCharge;
+
+      const [created] = await trx("orders")
+        .insert({
+          user_id: userId,
+          address_text: address_text.trim(),
+          order_type: "preorder",
+          status: "pending",
+          subtotal,
+          delivery_charge: deliveryCharge,
+          total_amount: totalAmount,
+          payment_status: "unpaid",
+          expected_delivery_date: batch.expected_delivery_date,
+        })
+        .returning("id");
+
+      await trx("order_items").insert({
+        order_id: created.id,
+        product_id: batch.product_id,
+        quantity: parsedQuantity,
+        unit_price: Number(batch.price_per_unit),
+        subtotal,
+      });
+
+      const affected = await trx("preorder_batches")
+        .where({ id: batchId })
+        .andWhereRaw("reserved_quantity + ? <= total_quantity", [parsedQuantity])
+        .update({
+          reserved_quantity: trx.raw("reserved_quantity + ?", [parsedQuantity]),
+          updated_at: trx.fn.now(),
+        });
+
+      if (affected === 0) {
+        throw new OrderError(400, "Not enough quantity available");
+      }
+
+      return created.id as number;
+    });
+
+    const order = await getOrderWithItems(db, orderId);
+
+    return res.status(201).json({ order });
+  } catch (error) {
+    if (error instanceof OrderError) {
+      return res.status(error.statusCode).json({ error: error.message });
+    }
+
+    return res.status(500).json({ error: "Something went wrong" });
+  }
+}
+
 export async function getMyOrders(req: Request, res: Response) {
   try {
     if (!req.user) {

@@ -6,6 +6,7 @@ import authRoutes from "./routes/authRoutes";
 import productRoutes from "./routes/productRoutes";
 import categoryRoutes from "./routes/categoryRoutes";
 import orderRoutes from "./routes/orderRoutes";
+import preorderBatchRoutes from "./routes/preorderBatchRoutes";
 
 // Load variables from .env into process.env
 dotenv.config();
@@ -25,6 +26,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/preorder-batches", preorderBatchRoutes);
 
 async function testDatabaseConnection() {
   try {
