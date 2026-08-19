@@ -35,7 +35,7 @@ export default function CategoryCards() {
       {categories.map((category) => (
         <Link
           key={category.slug}
-          to={`/products?category=${category.slug}`}
+          to={category.slug === 'preorder' ? '/preorders' : `/products?category=${category.slug}`}
           className="group relative overflow-hidden rounded-2xl shadow-sm ring-1 ring-black/5 transition-all duration-500 ease-out hover:-translate-y-1.5 hover:shadow-[0_20px_40px_rgba(45,90,61,0.18)] hover:ring-accent/35 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
         >
           <img

@@ -40,6 +40,9 @@ export interface PreorderBatch {
   preorder_end_date: string
   expected_delivery_date: string
   status: string
+  product_name?: string
+  unit?: string
+  image_url?: string | null
 }
 
 export interface OrderItem {
