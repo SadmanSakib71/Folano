@@ -1,15 +1,19 @@
-import { useEffect, useState } from "react";
-import { Link, NavLink, useLocation } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
+import type { User } from "../../types";
 import { formatBanglaNumber } from "../../utils/bangla";
 import {
   CalendarClock,
+  ChevronDown,
   Home,
+  LogOut,
   Menu,
   Package,
   ShoppingBasket,
   ShoppingCart,
-  User,
+  User as UserIcon,
   X,
 } from "lucide-react";
 
@@ -36,11 +40,110 @@ const mobileLinkClass = ({ isActive }: { isActive: boolean }) =>
       : "text-text hover:bg-primary/8 hover:text-primary",
   ].join(" ");
 
+function AccountMenu({ user }: { user: User }) {
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { logout } = useAuth();
+
+  useEffect(() => {
+    setOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const onPointerDown = (event: MouseEvent) => {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(event.target as Node)
+      ) {
+        setOpen(false);
+      }
+    };
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  function handleLogout() {
+    logout();
+    setOpen(false);
+    navigate("/login");
+  }
+
+  return (
+    <div className="relative" ref={menuRef}>
+      <button
+        type="button"
+        aria-label="অ্যাকাউন্ট মেনু"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+        className="flex max-w-[9.5rem] items-center gap-1.5 rounded-full py-1 pl-1 pr-2 text-sm font-medium text-primary transition-colors hover:bg-primary/8 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:max-w-[12rem] sm:pr-3"
+      >
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
+          <UserIcon className="h-4 w-4" strokeWidth={1.75} />
+        </span>
+        <span className="min-w-0 truncate">{user.name}</span>
+        <ChevronDown
+          className={[
+            "h-4 w-4 shrink-0 transition-transform duration-200",
+            open ? "rotate-180" : "",
+          ].join(" ")}
+          strokeWidth={1.75}
+        />
+      </button>
+
+      {open ? (
+        <div
+          role="menu"
+          className="absolute right-0 mt-2 w-48 overflow-hidden rounded-2xl border border-primary/10 bg-white py-1 shadow-[0_16px_40px_rgba(45,90,61,0.14)]"
+        >
+          <Link
+            role="menuitem"
+            to="/orders"
+            className="flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-text transition-colors hover:bg-primary/8 hover:text-primary"
+          >
+            <Package className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+            আমার অর্ডার
+          </Link>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={handleLogout}
+            className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm text-text transition-colors hover:bg-primary/8 hover:text-primary"
+          >
+            <LogOut className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+            লগআউট
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export default function Header() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const { totalItems } = useCart();
+  const { user, loading, isAuthenticated, logout } = useAuth();
 
   useEffect(() => {
     setOpen(false);
@@ -59,6 +162,12 @@ export default function Header() {
       document.body.style.overflow = "";
     };
   }, [open]);
+
+  function handleMobileLogout() {
+    logout();
+    setOpen(false);
+    navigate("/login");
+  }
 
   return (
     <header className="sticky top-0 z-50">
@@ -122,13 +231,21 @@ export default function Header() {
               ) : null}
             </Link>
 
-            <button
-              type="button"
-              aria-label="অ্যাকাউন্ট"
-              className="hidden h-10 w-10 items-center justify-center rounded-full text-primary transition-colors hover:bg-primary/8 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:flex"
-            >
-              <User className="h-5 w-5" strokeWidth={1.75} />
-            </button>
+            {loading ? (
+              <div
+                className="h-10 w-20 animate-pulse rounded-full bg-primary/10"
+                aria-hidden
+              />
+            ) : isAuthenticated && user ? (
+              <AccountMenu user={user} />
+            ) : (
+              <Link
+                to="/login"
+                className="inline-flex h-10 items-center rounded-full bg-primary px-3.5 text-sm font-medium text-cream shadow-[0_6px_16px_rgba(45,90,61,0.18)] transition hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              >
+                লগইন
+              </Link>
+            )}
 
             <button
               type="button"
@@ -178,13 +295,36 @@ export default function Header() {
                 );
               })}
             </nav>
-            <button
-              type="button"
-              className="mt-1 flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-base font-medium text-text transition-colors hover:bg-primary/8 hover:text-primary sm:hidden"
-            >
-              <User className="h-5 w-5 shrink-0" strokeWidth={1.75} />
-              অ্যাকাউন্ট
-            </button>
+            {loading ? null : isAuthenticated && user ? (
+              <div className="mt-1 border-t border-primary/10 pt-1">
+                <p className="px-4 py-2 text-sm font-medium text-primary">
+                  {user.name}
+                </p>
+                <Link
+                  to="/orders"
+                  className="flex items-center gap-3 rounded-2xl px-4 py-3 text-base font-medium text-text transition-colors hover:bg-primary/8 hover:text-primary"
+                >
+                  <Package className="h-5 w-5 shrink-0" strokeWidth={1.75} />
+                  আমার অর্ডার
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleMobileLogout}
+                  className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-base font-medium text-text transition-colors hover:bg-primary/8 hover:text-primary"
+                >
+                  <LogOut className="h-5 w-5 shrink-0" strokeWidth={1.75} />
+                  লগআউট
+                </button>
+              </div>
+            ) : (
+              <Link
+                to="/login"
+                className="mt-1 flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-base font-medium text-text transition-colors hover:bg-primary/8 hover:text-primary"
+              >
+                <UserIcon className="h-5 w-5 shrink-0" strokeWidth={1.75} />
+                লগইন
+              </Link>
+            )}
           </div>
         ) : null}
       </div>
