@@ -3,6 +3,7 @@ import { AuthProvider } from './context/AuthContext'
 import { CartProvider } from './context/CartContext'
 import MainLayout from './components/layout/MainLayout'
 import Cart from './pages/Cart'
+import Checkout from './pages/Checkout'
 import Home from './pages/Home'
 import Login from './pages/Login'
 import Orders from './pages/Orders'
@@ -26,6 +27,7 @@ function App() {
               <Route path="/preorders" element={<Preorders />} />
               <Route path="/orders" element={<Orders />} />
               <Route path="/cart" element={<Cart />} />
+              <Route path="/checkout" element={<Checkout />} />
             </Route>
           </Routes>
         </BrowserRouter>

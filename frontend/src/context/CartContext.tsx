@@ -33,22 +33,48 @@ interface CartContextValue {
 
 const CartContext = createContext<CartContextValue | null>(null)
 
-function isCartItem(value: unknown): value is CartItem {
+function toFiniteNumber(value: unknown): number | null {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null
+  }
+
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : null
+  }
+
+  return null
+}
+
+function parseStoredCartItem(value: unknown): CartItem | null {
   if (!value || typeof value !== 'object') {
-    return false
+    return null
   }
 
   const item = value as Record<string, unknown>
+  const price = toFiniteNumber(item.price)
 
-  return (
-    typeof item.product_id === 'number' &&
-    typeof item.name === 'string' &&
-    typeof item.price === 'number' &&
-    typeof item.unit === 'string' &&
-    (item.image_url === null || typeof item.image_url === 'string') &&
-    typeof item.quantity === 'number' &&
-    typeof item.stock_quantity === 'number'
-  )
+  if (
+    typeof item.product_id !== 'number' ||
+    typeof item.name !== 'string' ||
+    price === null ||
+    typeof item.unit !== 'string' ||
+    (item.image_url !== null && typeof item.image_url !== 'string') ||
+    typeof item.quantity !== 'number' ||
+    typeof item.stock_quantity !== 'number'
+  ) {
+    return null
+  }
+
+  return {
+    product_id: item.product_id,
+    name: item.name,
+    price,
+    unit: item.unit,
+    image_url: item.image_url,
+    quantity: item.quantity,
+    stock_quantity: item.stock_quantity,
+  }
 }
 
 // Invalid or corrupted localStorage should never crash the app.
@@ -66,7 +92,17 @@ function loadCartFromStorage(): CartItem[] {
       return []
     }
 
-    return normalizeCartItems(parsed.filter(isCartItem))
+    const items: CartItem[] = []
+
+    for (const entry of parsed) {
+      const item = parseStoredCartItem(entry)
+
+      if (item) {
+        items.push(item)
+      }
+    }
+
+    return normalizeCartItems(items)
   } catch {
     return []
   }
@@ -76,7 +112,7 @@ function toCartItem(product: Product, quantity: number): CartItem {
   return {
     product_id: product.id,
     name: product.name,
-    price: product.price,
+    price: Number(product.price),
     unit: product.unit,
     image_url: product.image_url,
     quantity,
