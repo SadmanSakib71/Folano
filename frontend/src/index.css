@@ -1,1 +1,16 @@
 @import "tailwindcss";
+
+@theme {
+  --color-primary: #2d5a3d;
+  --color-accent: #e8912d;
+  --color-cream: #fbf8f3;
+  --color-text: #1f2a22;
+  --color-muted: #6b7568;
+
+  --font-heading: "Fraunces", serif;
+  --font-body: "Inter", sans-serif;
+}
+
+body {
+  @apply m-0 bg-cream font-body text-text antialiased;
+}
