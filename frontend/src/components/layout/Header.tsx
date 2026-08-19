@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
+import { formatBanglaNumber } from "../../utils/bangla";
 import {
   CalendarClock,
   Home,
@@ -82,17 +83,17 @@ export default function Header() {
             </span>
             <span className="min-w-0">
               <span className="block font-heading text-lg font-semibold leading-none tracking-tight text-primary sm:text-xl">
-                Folana
+                ফলানা
               </span>
               <span className="mt-0.5 hidden text-[11px] font-medium tracking-wide text-muted sm:block">
-                Freshness from Nature
+                প্রকৃতি থেকে সতেজতা
               </span>
             </span>
           </NavLink>
 
           <nav
             className="hidden items-center gap-1 lg:flex"
-            aria-label="Primary"
+            aria-label="প্রধান মেনু"
           >
             {links.map((link) => (
               <NavLink
@@ -116,7 +117,7 @@ export default function Header() {
               {/* Hide the badge when the cart is empty so the icon stays clean. */}
               {totalItems > 0 ? (
                 <span className="absolute -right-0.5 -top-0.5 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold leading-none text-cream">
-                  {totalItems}
+                  {formatBanglaNumber(totalItems)}
                 </span>
               ) : null}
             </Link>
@@ -160,7 +161,7 @@ export default function Header() {
             id="mobile-nav"
             className="relative z-50 mx-auto mt-2 max-w-6xl overflow-hidden rounded-2xl border border-primary/10 bg-white/95 p-2 shadow-[0_16px_40px_rgba(45,90,61,0.14)] backdrop-blur-xl lg:hidden"
           >
-            <nav className="flex flex-col gap-1" aria-label="Mobile">
+            <nav className="flex flex-col gap-1" aria-label="মোবাইল মেনু">
               {links.map((link) => {
                 const Icon = link.icon;
 

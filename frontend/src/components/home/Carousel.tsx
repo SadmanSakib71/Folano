@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { toBanglaDigits } from '../../utils/bangla'
 import { placeholderImages } from '../../utils/placeholderImages'
 
 const slides = [
@@ -8,16 +9,16 @@ const slides = [
     heading: 'সিজনের সেরা ফল আগে থেকেই বুক করুন',
     text: 'তাজা মৌসুমি ফলের জন্য আজই আপনার প্রি-অর্ডার করুন।',
     image: placeholderImages.mango,
-    imageAlt: 'Seasonal mangoes',
+    imageAlt: 'মৌসুমি আম',
     ctaLabel: 'প্রি-অর্ডার করুন',
     ctaTo: '/preorders',
   },
   {
     eyebrow: 'নতুন এসেছে',
-    heading: 'নতুন ইমপোর্টেড ফল এখন পাওয়া যাচ্ছে',
+    heading: 'নতুন আমদানি করা ফল এখন পাওয়া যাচ্ছে',
     text: 'বেছে নিন আপনার পছন্দের বিদেশি ফল।',
     image: placeholderImages.grapes,
-    imageAlt: 'Imported grapes',
+    imageAlt: 'আমদানি করা আঙুর',
     ctaLabel: 'ফল দেখুন',
     ctaTo: '/products',
   },
@@ -26,7 +27,7 @@ const slides = [
     heading: 'ফ্রি ডেলিভারি উপভোগ করুন',
     text: 'নির্দিষ্ট অর্ডারে কোনো ডেলিভারি চার্জ নেই।',
     image: placeholderImages.default,
-    imageAlt: 'Assorted fresh fruit basket',
+    imageAlt: 'মিশ্র তাজা ফলের ঝুড়ি',
     ctaLabel: 'এখনই দেখুন',
     ctaTo: '/products',
   },
@@ -100,7 +101,7 @@ export default function Carousel() {
             <button
               key={slide.heading}
               type="button"
-              aria-label={`Go to slide ${slideIndex + 1}`}
+              aria-label={`স্লাইড ${toBanglaDigits(slideIndex + 1)} দেখুন`}
               aria-current={isActive}
               onClick={() => setIndex(slideIndex)}
               className={`h-2.5 rounded-full transition-all ${

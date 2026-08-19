@@ -17,7 +17,7 @@ const categories = [
   },
   {
     name: 'বিদেশি ফল',
-    slug: 'imported',
+    slug: 'imported-fruits',
     description: 'বাছাই করা আমদানিকৃত ফল',
     image: placeholderImages.kiwi,
   },

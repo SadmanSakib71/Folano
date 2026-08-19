@@ -6,6 +6,7 @@ import { getCategories } from '../api/categories'
 import { getProductById } from '../api/products'
 import { useCart } from '../context/CartContext'
 import type { Category, Product } from '../types'
+import { formatBanglaNumber, formatPriceWithUnit } from '../utils/bangla'
 import { getPlaceholderImage } from '../utils/placeholderImages'
 
 function isNotFoundError(error: unknown) {
@@ -223,7 +224,7 @@ export default function ProductDetail() {
               </h1>
 
               <p className="mt-3 text-2xl font-medium text-accent">
-                ৳{product.price}/{product.unit}
+                {formatPriceWithUnit(product.price, product.unit)}
               </p>
 
               {product.description ? (
@@ -266,7 +267,7 @@ export default function ProductDetail() {
                       <Minus className="h-4 w-4" strokeWidth={2} />
                     </button>
                     <span className="min-w-8 text-center text-base font-medium text-text">
-                      {quantity}
+                      {formatBanglaNumber(quantity)}
                     </span>
                     <button
                       type="button"

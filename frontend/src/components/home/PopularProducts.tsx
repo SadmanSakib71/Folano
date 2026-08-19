@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getProducts } from '../../api/products'
 import type { Product } from '../../types'
+import { formatPriceWithUnit } from '../../utils/bangla'
 import { getPlaceholderImage } from '../../utils/placeholderImages'
 
 function StatusCard({
@@ -119,7 +120,7 @@ export default function PopularProducts() {
                 {product.name}
               </h3>
               <p className="mt-2 inline-flex rounded-full bg-accent/10 px-2.5 py-1 text-sm font-medium text-accent">
-                ৳{product.price}/{product.unit}
+                {formatPriceWithUnit(product.price, product.unit)}
               </p>
             </div>
           </article>

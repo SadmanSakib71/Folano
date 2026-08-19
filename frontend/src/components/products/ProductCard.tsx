@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { Product } from '../../types'
+import { formatPriceWithUnit } from '../../utils/bangla'
 import { getPlaceholderImage } from '../../utils/placeholderImages'
 
 export default function ProductCard({ product }: { product: Product }) {
@@ -41,7 +42,7 @@ export default function ProductCard({ product }: { product: Product }) {
           {product.name}
         </h3>
         <p className="mt-2 text-sm font-medium text-accent">
-          ৳{product.price}/{product.unit}
+          {formatPriceWithUnit(product.price, product.unit)}
         </p>
       </div>
     </Link>

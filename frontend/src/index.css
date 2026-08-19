@@ -7,8 +7,8 @@
   --color-text: #1f2a22;
   --color-muted: #6b7568;
 
-  --font-heading: "Fraunces", "Noto Serif Bengali", serif;
-  --font-body: "Inter", "Noto Sans Bengali", sans-serif;
+  --font-heading: "Noto Serif Bengali", "Fraunces", serif;
+  --font-body: "Noto Sans Bengali", "Inter", sans-serif;
 }
 
 body {
