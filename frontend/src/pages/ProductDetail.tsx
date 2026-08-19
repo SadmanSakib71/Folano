@@ -4,6 +4,7 @@ import { Minus, Plus, ShoppingBasket, ShoppingCart } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { getCategories } from '../api/categories'
 import { getProductById } from '../api/products'
+import { useCart } from '../context/CartContext'
 import type { Category, Product } from '../types'
 import { getPlaceholderImage } from '../utils/placeholderImages'
 
@@ -58,7 +59,8 @@ export default function ProductDetail() {
   const [notFound, setNotFound] = useState(false)
   const [hasError, setHasError] = useState(false)
   const [quantity, setQuantity] = useState(1)
-  const [toast, setToast] = useState<string | null>(null)
+  const [addedAt, setAddedAt] = useState<number | null>(null)
+  const { addToCart } = useCart()
 
   useEffect(() => {
     const productId = Number(id)
@@ -80,6 +82,7 @@ export default function ProductDetail() {
     setProduct(null)
     setCategory(null)
     setQuantity(1)
+    setAddedAt(null)
 
     getProductById(productId)
       .then((data) => {
@@ -126,13 +129,13 @@ export default function ProductDetail() {
   }, [id])
 
   useEffect(() => {
-    if (!toast) {
+    if (!addedAt) {
       return
     }
 
-    const timeoutId = window.setTimeout(() => setToast(null), 2500)
+    const timeoutId = window.setTimeout(() => setAddedAt(null), 2500)
     return () => window.clearTimeout(timeoutId)
-  }, [toast])
+  }, [addedAt])
 
   const canAddToCart =
     product !== null && !product.is_preorder_only && product.stock_quantity > 0
@@ -150,7 +153,12 @@ export default function ProductDetail() {
   }
 
   const handleAddToCart = () => {
-    setToast('Added to cart')
+    if (!product || !canAddToCart) {
+      return
+    }
+
+    addToCart(product, quantity)
+    setAddedAt(Date.now())
   }
 
   const imageSrc = product?.image_url?.trim()
@@ -279,6 +287,12 @@ export default function ProductDetail() {
                     <ShoppingCart className="h-4 w-4" strokeWidth={1.75} />
                     কার্টে যোগ করুন
                   </button>
+
+                  {addedAt ? (
+                    <p className="text-sm font-medium text-primary" role="status">
+                      কার্টে যোগ হয়েছে
+                    </p>
+                  ) : null}
                 </div>
               ) : null}
 
@@ -298,15 +312,6 @@ export default function ProductDetail() {
           </section>
         </>
       )}
-
-      {toast ? (
-        <div
-          role="status"
-          className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-cream shadow-[0_12px_28px_rgba(45,90,61,0.28)]"
-        >
-          {toast}
-        </div>
-      ) : null}
     </div>
   )
 }

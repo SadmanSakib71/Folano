@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
+import { useCart } from "../../context/CartContext";
 import {
   CalendarClock,
   Home,
@@ -38,6 +39,7 @@ export default function Header() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
+  const { totalItems } = useCart();
 
   useEffect(() => {
     setOpen(false);
@@ -105,16 +107,19 @@ export default function Header() {
           </nav>
 
           <div className="flex items-center gap-1.5 sm:gap-2">
-            <button
-              type="button"
+            <Link
+              to="/cart"
               aria-label="কার্ট"
               className="relative flex h-10 w-10 items-center justify-center rounded-full text-primary transition-colors hover:bg-primary/8 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             >
               <ShoppingCart className="h-5 w-5" strokeWidth={1.75} />
-              <span className="absolute -right-0.5 -top-0.5 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold leading-none text-cream">
-                0
-              </span>
-            </button>
+              {/* Hide the badge when the cart is empty so the icon stays clean. */}
+              {totalItems > 0 ? (
+                <span className="absolute -right-0.5 -top-0.5 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold leading-none text-cream">
+                  {totalItems}
+                </span>
+              ) : null}
+            </Link>
 
             <button
               type="button"
