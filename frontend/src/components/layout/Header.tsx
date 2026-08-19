@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { useEffect, useState } from "react";
+import { NavLink, useLocation } from "react-router-dom";
 import {
   CalendarClock,
   Home,
@@ -9,53 +9,53 @@ import {
   ShoppingCart,
   User,
   X,
-} from 'lucide-react'
+} from "lucide-react";
 
 const links = [
-  { to: '/', label: 'হোম', end: true, icon: Home },
-  { to: '/products', label: 'ফল', icon: ShoppingBasket },
-  { to: '/preorders', label: 'প্রি-অর্ডার', icon: CalendarClock },
-  { to: '/orders', label: 'অর্ডার', icon: Package },
-]
+  { to: "/", label: "হোম", end: true, icon: Home },
+  { to: "/products", label: "ফল", icon: ShoppingBasket },
+  { to: "/preorders", label: "প্রি-অর্ডার", icon: CalendarClock },
+  { to: "/orders", label: "অর্ডার", icon: Package },
+];
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   [
-    'rounded-full px-4 py-2 text-sm font-medium tracking-wide transition-all duration-300',
+    "rounded-full px-4 py-2 text-sm font-medium tracking-wide transition-all duration-300",
     isActive
-      ? 'bg-primary text-cream shadow-[0_6px_16px_rgba(45,90,61,0.22)]'
-      : 'text-muted hover:bg-primary/8 hover:text-primary',
-  ].join(' ')
+      ? "bg-primary text-cream shadow-[0_6px_16px_rgba(45,90,61,0.22)]"
+      : "text-muted hover:bg-primary/8 hover:text-primary",
+  ].join(" ");
 
 const mobileLinkClass = ({ isActive }: { isActive: boolean }) =>
   [
-    'flex items-center gap-3 rounded-2xl px-4 py-3 text-base font-medium transition-all duration-300',
+    "flex items-center gap-3 rounded-2xl px-4 py-3 text-base font-medium transition-all duration-300",
     isActive
-      ? 'bg-primary text-cream shadow-sm'
-      : 'text-text hover:bg-primary/8 hover:text-primary',
-  ].join(' ')
+      ? "bg-primary text-cream shadow-sm"
+      : "text-text hover:bg-primary/8 hover:text-primary",
+  ].join(" ");
 
 export default function Header() {
-  const [open, setOpen] = useState(false)
-  const [scrolled, setScrolled] = useState(false)
-  const location = useLocation()
+  const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
-    setOpen(false)
-  }, [location.pathname])
+    setOpen(false);
+  }, [location.pathname]);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8)
-    onScroll()
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   useEffect(() => {
-    document.body.style.overflow = open ? 'hidden' : ''
+    document.body.style.overflow = open ? "hidden" : "";
     return () => {
-      document.body.style.overflow = ''
-    }
-  }, [open])
+      document.body.style.overflow = "";
+    };
+  }, [open]);
 
   return (
     <header className="sticky top-0 z-50">
@@ -64,11 +64,11 @@ export default function Header() {
       <div className="relative px-3 pt-3 sm:px-4 sm:pt-4">
         <div
           className={[
-            'relative z-50 mx-auto flex max-w-6xl items-center justify-between gap-3 rounded-2xl border px-3 py-2.5 transition-all duration-300 sm:px-4',
+            "relative z-50 mx-auto flex max-w-6xl items-center justify-between gap-3 rounded-2xl border px-3 py-2.5 transition-all duration-300 sm:px-4",
             scrolled || open
-              ? 'border-primary/10 bg-white/85 shadow-[0_12px_40px_rgba(45,90,61,0.12)] backdrop-blur-xl'
-              : 'border-white/70 bg-white/70 shadow-[0_8px_28px_rgba(45,90,61,0.08)] backdrop-blur-md',
-          ].join(' ')}
+              ? "border-primary/10 bg-white/85 shadow-[0_12px_40px_rgba(45,90,61,0.12)] backdrop-blur-xl"
+              : "border-white/70 bg-white/70 shadow-[0_8px_28px_rgba(45,90,61,0.08)] backdrop-blur-md",
+          ].join(" ")}
         >
           <NavLink to="/" className="group flex min-w-0 items-center gap-2.5">
             <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white shadow-[0_6px_16px_rgba(45,90,61,0.16)] ring-1 ring-primary/10 transition-transform duration-300 group-hover:scale-105">
@@ -88,7 +88,10 @@ export default function Header() {
             </span>
           </NavLink>
 
-          <nav className="hidden items-center gap-1 lg:flex" aria-label="Primary">
+          <nav
+            className="hidden items-center gap-1 lg:flex"
+            aria-label="Primary"
+          >
             {links.map((link) => (
               <NavLink
                 key={link.to}
@@ -123,7 +126,7 @@ export default function Header() {
 
             <button
               type="button"
-              aria-label={open ? 'মেনু বন্ধ করুন' : 'মেনু খুলুন'}
+              aria-label={open ? "মেনু বন্ধ করুন" : "মেনু খুলুন"}
               aria-expanded={open}
               aria-controls="mobile-nav"
               onClick={() => setOpen((value) => !value)}
@@ -154,7 +157,7 @@ export default function Header() {
           >
             <nav className="flex flex-col gap-1" aria-label="Mobile">
               {links.map((link) => {
-                const Icon = link.icon
+                const Icon = link.icon;
 
                 return (
                   <NavLink
@@ -166,7 +169,7 @@ export default function Header() {
                     <Icon className="h-5 w-5 shrink-0" strokeWidth={1.75} />
                     {link.label}
                   </NavLink>
-                )
+                );
               })}
             </nav>
             <button
@@ -180,5 +183,5 @@ export default function Header() {
         ) : null}
       </div>
     </header>
-  )
+  );
 }

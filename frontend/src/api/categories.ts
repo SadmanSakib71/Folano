@@ -4,5 +4,5 @@ import api from './client'
 export const getCategories = async () => {
   const response = await api.get<Category[]>('/categories')
 
-  return response.data
+  return Array.isArray(response.data) ? response.data : []
 }
