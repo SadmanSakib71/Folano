@@ -3,7 +3,6 @@ import { NavLink, useLocation } from 'react-router-dom'
 import {
   CalendarClock,
   Home,
-  Leaf,
   Menu,
   Package,
   ShoppingBasket,
@@ -72,15 +71,19 @@ export default function Header() {
           ].join(' ')}
         >
           <NavLink to="/" className="group flex min-w-0 items-center gap-2.5">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-cream shadow-[0_6px_16px_rgba(45,90,61,0.28)] transition-transform duration-300 group-hover:scale-105 group-hover:-rotate-6">
-              <Leaf className="h-5 w-5" strokeWidth={1.75} />
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white shadow-[0_6px_16px_rgba(45,90,61,0.16)] ring-1 ring-primary/10 transition-transform duration-300 group-hover:scale-105">
+              <img
+                src="/logo-mark.png"
+                alt=""
+                className="h-full w-full object-contain p-0.5"
+              />
             </span>
             <span className="min-w-0">
               <span className="block font-heading text-lg font-semibold leading-none tracking-tight text-primary sm:text-xl">
                 Folana
               </span>
               <span className="mt-0.5 hidden text-[11px] font-medium tracking-wide text-muted sm:block">
-                ফলের দোকান
+                Freshness from Nature
               </span>
             </span>
           </NavLink>
