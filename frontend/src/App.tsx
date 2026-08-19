@@ -6,7 +6,7 @@ import Cart from './pages/Cart'
 import Checkout from './pages/Checkout'
 import Home from './pages/Home'
 import Login from './pages/Login'
-import Orders from './pages/Orders'
+import MyOrders from './pages/MyOrders'
 import Preorders from './pages/Preorders'
 import ProductDetail from './pages/ProductDetail'
 import Products from './pages/Products'
@@ -25,7 +25,7 @@ function App() {
               <Route path="/products" element={<Products />} />
               <Route path="/products/:id" element={<ProductDetail />} />
               <Route path="/preorders" element={<Preorders />} />
-              <Route path="/orders" element={<Orders />} />
+              <Route path="/orders" element={<MyOrders />} />
               <Route path="/cart" element={<Cart />} />
               <Route path="/checkout" element={<Checkout />} />
             </Route>

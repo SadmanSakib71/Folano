@@ -42,6 +42,16 @@ export interface PreorderBatch {
   status: string
 }
 
+export interface OrderItem {
+  id: number
+  order_id?: number
+  product_id: number
+  product_name?: string
+  quantity: number
+  unit_price: number
+  subtotal: number
+}
+
 export interface Order {
   id: number
   user_id: number
@@ -54,13 +64,6 @@ export interface Order {
   payment_status: string
   expected_delivery_date: string | null
   created_at: string
-}
-
-export interface OrderItem {
-  id: number
-  order_id: number
-  product_id: number
-  quantity: number
-  unit_price: number
-  subtotal: number
+  items?: OrderItem[]
+  order_items?: OrderItem[]
 }
