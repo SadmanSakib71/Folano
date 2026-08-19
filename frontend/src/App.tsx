@@ -3,6 +3,7 @@ import MainLayout from './components/layout/MainLayout'
 import Home from './pages/Home'
 import Orders from './pages/Orders'
 import Preorders from './pages/Preorders'
+import ProductDetail from './pages/ProductDetail'
 import Products from './pages/Products'
 
 function App() {
@@ -12,6 +13,7 @@ function App() {
         <Route element={<MainLayout />}>
           <Route path="/" element={<Home />} />
           <Route path="/products" element={<Products />} />
+          <Route path="/products/:id" element={<ProductDetail />} />
           <Route path="/preorders" element={<Preorders />} />
           <Route path="/orders" element={<Orders />} />
         </Route>
