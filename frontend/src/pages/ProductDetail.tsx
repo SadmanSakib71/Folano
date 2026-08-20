@@ -4,6 +4,8 @@ import { Minus, Plus, ShoppingBasket, ShoppingCart } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { getCategories } from '../api/categories'
 import { getProductById } from '../api/products'
+import ReviewForm from '../components/reviews/ReviewForm'
+import ReviewsList from '../components/reviews/ReviewsList'
 import { useCart } from '../context/CartContext'
 import type { Category, Product } from '../types'
 import { formatBanglaNumber, formatPriceWithUnit } from '../utils/bangla'
@@ -61,6 +63,7 @@ export default function ProductDetail() {
   const [hasError, setHasError] = useState(false)
   const [quantity, setQuantity] = useState(1)
   const [addedAt, setAddedAt] = useState<number | null>(null)
+  const [refreshKey, setRefreshKey] = useState(0)
   const { addToCart } = useCart()
 
   useEffect(() => {
@@ -305,11 +308,17 @@ export default function ProductDetail() {
             </div>
           </div>
 
-          <section className="mt-12 rounded-2xl border border-primary/10 bg-white px-6 py-10 text-center shadow-sm sm:mt-14">
+          <section className="mt-12 sm:mt-14">
             <h2 className="font-heading text-2xl font-semibold text-text">
               রিভিউ
             </h2>
-            <p className="mt-2 text-muted">শীঘ্রই আসছে</p>
+            <div className="mt-6 grid min-w-0 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
+              <ReviewsList productId={product.id} refreshKey={refreshKey} />
+              <ReviewForm
+                productId={product.id}
+                onReviewSubmitted={() => setRefreshKey((prev) => prev + 1)}
+              />
+            </div>
           </section>
         </>
       )}
