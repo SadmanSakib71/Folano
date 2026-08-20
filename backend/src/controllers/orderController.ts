@@ -380,6 +380,7 @@ export async function createPreorder(req: Request, res: Response) {
       await trx("order_items").insert({
         order_id: created.id,
         product_id: batch.product_id,
+        batch_id: batchId,
         quantity: parsedQuantity,
         unit_price: Number(batch.price_per_unit),
         subtotal,

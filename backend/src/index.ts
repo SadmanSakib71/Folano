@@ -8,6 +8,7 @@ import categoryRoutes from "./routes/categoryRoutes";
 import orderRoutes from "./routes/orderRoutes";
 import preorderBatchRoutes from "./routes/preorderBatchRoutes";
 import reviewRoutes from "./routes/reviewRoutes";
+import { startJobs } from "./jobs";
 
 // Load variables from .env into process.env
 dotenv.config();
@@ -41,6 +42,7 @@ async function testDatabaseConnection() {
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  startJobs();
 });
 
 testDatabaseConnection();
