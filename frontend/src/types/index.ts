@@ -54,6 +54,7 @@ export interface OrderItem {
   quantity: number
   unit_price: number
   subtotal: number
+  batch_id?: number | null
 }
 
 export interface Order {
@@ -70,4 +71,6 @@ export interface Order {
   created_at: string
   items?: OrderItem[]
   order_items?: OrderItem[]
+  customer_name?: string
+  customer_phone?: string
 }
