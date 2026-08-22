@@ -1,10 +1,13 @@
 import { Router } from "express";
-import { authenticate } from "../middlewares/authMiddleware";
+import { authenticate, requireAdmin } from "../middlewares/authMiddleware";
 import {
   createOrder,
   createPreorder,
+  getAllOrders,
   getMyOrders,
   getOrderById,
+  updateOrderStatus,
+  updatePaymentStatus,
 } from "../controllers/orderController";
 
 const router = Router();
@@ -12,6 +15,9 @@ const router = Router();
 router.post("/", authenticate, createOrder);
 router.post("/preorder", authenticate, createPreorder);
 router.get("/my", authenticate, getMyOrders);
+router.get("/", authenticate, requireAdmin, getAllOrders);
+router.patch("/:id/status", authenticate, requireAdmin, updateOrderStatus);
+router.patch("/:id/payment-status", authenticate, requireAdmin, updatePaymentStatus);
 router.get("/:id", authenticate, getOrderById);
 
 export default router;

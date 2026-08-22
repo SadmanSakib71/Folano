@@ -35,7 +35,48 @@ type OrderItemRow = {
   quantity: string | number;
   unit_price: string | number;
   subtotal: string | number;
+  batch_id: number | null;
 };
+
+const ALLOWED_ORDER_TYPES = ["normal", "preorder"] as const;
+const ALLOWED_ORDER_STATUSES = [
+  "pending",
+  "confirmed",
+  "processing",
+  "out_for_delivery",
+  "delivered",
+  "cancelled",
+] as const;
+const ALLOWED_PAYMENT_STATUSES = ["unpaid", "partial", "paid"] as const;
+
+type AllowedOrderType = (typeof ALLOWED_ORDER_TYPES)[number];
+type AllowedOrderStatus = (typeof ALLOWED_ORDER_STATUSES)[number];
+type AllowedPaymentStatus = (typeof ALLOWED_PAYMENT_STATUSES)[number];
+
+function isAllowedOrderType(value: unknown): value is AllowedOrderType {
+  return typeof value === "string" && ALLOWED_ORDER_TYPES.includes(value as AllowedOrderType);
+}
+
+function isAllowedOrderStatus(value: unknown): value is AllowedOrderStatus {
+  return typeof value === "string" && ALLOWED_ORDER_STATUSES.includes(value as AllowedOrderStatus);
+}
+
+function isAllowedPaymentStatus(value: unknown): value is AllowedPaymentStatus {
+  return (
+    typeof value === "string" && ALLOWED_PAYMENT_STATUSES.includes(value as AllowedPaymentStatus)
+  );
+}
+
+function parseOrderId(value: string | string[]): number | null {
+  const raw = Array.isArray(value) ? value[0] : value;
+  const orderId = Number(raw);
+
+  if (!Number.isInteger(orderId) || orderId <= 0) {
+    return null;
+  }
+
+  return orderId;
+}
 
 type MergedItem = {
   product_id: number;
@@ -122,12 +163,13 @@ async function fetchOrderItems(
       "products.name as product_name",
       "order_items.quantity",
       "order_items.unit_price",
-      "order_items.subtotal"
+      "order_items.subtotal",
+      "order_items.batch_id"
     )
     .orderBy("order_items.id", "asc");
 }
 
-function attachItemsToOrders(orders: OrderRow[], items: OrderItemRow[]) {
+function attachItemsToOrders<T extends { id: number }>(orders: T[], items: OrderItemRow[]) {
   const itemsByOrderId = new Map<number, Omit<OrderItemRow, "order_id">[]>();
 
   for (const item of items) {
@@ -139,6 +181,7 @@ function attachItemsToOrders(orders: OrderRow[], items: OrderItemRow[]) {
       quantity: item.quantity,
       unit_price: item.unit_price,
       subtotal: item.subtotal,
+      batch_id: item.batch_id,
     });
     itemsByOrderId.set(item.order_id, existing);
   }
@@ -459,5 +502,129 @@ export async function getOrderById(req: Request, res: Response) {
     return res.status(200).json({ order });
   } catch {
     return res.status(500).json({ error: "Something went wrong" });
+  }
+}
+
+export async function getAllOrders(req: Request, res: Response) {
+  try {
+    const status = req.query.status;
+    const orderType = req.query.order_type;
+
+    // Only accept the known order types used by this shop.
+    if (orderType !== undefined && orderType !== "") {
+      if (!isAllowedOrderType(orderType)) {
+        return res.status(400).json({ message: "Invalid order_type" });
+      }
+    }
+
+    // Join users so the admin list can show the customer's name and phone.
+    const query = db("orders")
+      .join("users", "orders.user_id", "users.id")
+      .select(
+        "orders.id",
+        "orders.user_id",
+        "users.name as customer_name",
+        "users.phone as customer_phone",
+        "orders.order_type",
+        "orders.status",
+        "orders.payment_status",
+        "orders.address_text",
+        "orders.delivery_charge",
+        "orders.subtotal",
+        "orders.total_amount",
+        "orders.expected_delivery_date",
+        "orders.created_at"
+      )
+      .orderBy("orders.created_at", "desc");
+
+    if (typeof status === "string" && status.trim() !== "") {
+      query.where("orders.status", status);
+    }
+
+    if (isAllowedOrderType(orderType)) {
+      query.where("orders.order_type", orderType);
+    }
+
+    const orders = await query;
+
+    // Join order_items → products so each order includes product names and batch_id.
+    const items = await fetchOrderItems(
+      db,
+      orders.map((order) => order.id)
+    );
+
+    return res.status(200).json(attachItemsToOrders(orders, items));
+  } catch {
+    return res.status(500).json({ message: "Something went wrong" });
+  }
+}
+
+export async function updateOrderStatus(req: Request, res: Response) {
+  try {
+    const orderId = parseOrderId(req.params.id);
+
+    if (orderId === null) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    const { status } = req.body;
+
+    if (status === undefined || status === null || status === "") {
+      return res.status(400).json({ message: "status is required" });
+    }
+
+    if (!isAllowedOrderStatus(status)) {
+      return res.status(400).json({ message: "Invalid order status" });
+    }
+
+    const existing = await db("orders").where({ id: orderId }).first();
+
+    if (!existing) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    // Only the order status changes. Items, totals, stock, and payment stay the same.
+    await db("orders").where({ id: orderId }).update({ status });
+
+    const order = await getOrderWithItems(db, orderId);
+
+    return res.status(200).json({ order });
+  } catch {
+    return res.status(500).json({ message: "Something went wrong" });
+  }
+}
+
+export async function updatePaymentStatus(req: Request, res: Response) {
+  try {
+    const orderId = parseOrderId(req.params.id);
+
+    if (orderId === null) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    const { payment_status } = req.body;
+
+    if (payment_status === undefined || payment_status === null || payment_status === "") {
+      return res.status(400).json({ message: "payment_status is required" });
+    }
+
+    if (!isAllowedPaymentStatus(payment_status)) {
+      return res.status(400).json({ message: "Invalid payment status" });
+    }
+
+    const existing = await db("orders").where({ id: orderId }).first();
+
+    if (!existing) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    // Only payment_status changes. Order status, items, totals, and stock stay the same.
+    await db("orders").where({ id: orderId }).update({ payment_status });
+
+    const order = await getOrderWithItems(db, orderId);
+
+    return res.status(200).json({ order });
+  } catch {
+    return res.status(500).json({ message: "Something went wrong" });
   }
 }
