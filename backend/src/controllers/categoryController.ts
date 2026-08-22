@@ -3,6 +3,17 @@ import db from "../config/database";
 
 export async function getAllCategories(_req: Request, res: Response) {
   try {
+    const categories = await db("categories")
+      .where({ is_active: true })
+      .select("*");
+    return res.status(200).json(categories);
+  } catch {
+    return res.status(500).json({ error: "Something went wrong" });
+  }
+}
+
+export async function getAdminCategories(_req: Request, res: Response) {
+  try {
     const categories = await db("categories").select("*");
     return res.status(200).json(categories);
   } catch {
@@ -12,7 +23,7 @@ export async function getAllCategories(_req: Request, res: Response) {
 
 export async function createCategory(req: Request, res: Response) {
   try {
-    const { name, slug, description } = req.body;
+    const { name, slug, description, is_active } = req.body;
 
     if (
       name === undefined ||
@@ -36,6 +47,7 @@ export async function createCategory(req: Request, res: Response) {
         name,
         slug,
         description: description ?? null,
+        is_active: is_active ?? true,
       })
       .returning("*");
 
@@ -43,6 +55,11 @@ export async function createCategory(req: Request, res: Response) {
   } catch {
     return res.status(500).json({ error: "Something went wrong" });
   }
+}
+
+async function categoryHasProducts(categoryId: number) {
+  const product = await db("products").where({ category_id: categoryId }).first();
+  return Boolean(product);
 }
 
 export async function updateCategory(req: Request, res: Response) {
@@ -53,12 +70,13 @@ export async function updateCategory(req: Request, res: Response) {
       return res.status(404).json({ error: "Category not found" });
     }
 
-    const allowedFields = ["name", "slug", "description"] as const;
+    const allowedFields = ["name", "slug", "description", "is_active"] as const;
 
     const updates: {
       name?: unknown;
       slug?: unknown;
       description?: unknown;
+      is_active?: unknown;
       updated_at?: ReturnType<typeof db.fn.now>;
     } = {};
 
@@ -76,6 +94,14 @@ export async function updateCategory(req: Request, res: Response) {
 
       if (slugTaken) {
         return res.status(400).json({ error: "Slug already exists" });
+      }
+    }
+
+    if (updates.is_active === false && existing.is_active !== false) {
+      if (await categoryHasProducts(existing.id)) {
+        return res.status(400).json({
+          error: "Cannot delete category with existing products",
+        });
       }
     }
 
@@ -100,19 +126,23 @@ export async function deleteCategory(req: Request, res: Response) {
       return res.status(404).json({ error: "Category not found" });
     }
 
-    const product = await db("products")
-      .where({ category_id: existing.id })
-      .first();
-
-    if (product) {
+    if (await categoryHasProducts(existing.id)) {
       return res.status(400).json({
         error: "Cannot delete category with existing products",
       });
     }
 
-    await db("categories").where({ id: existing.id }).del();
+    await db("categories").where({ id: existing.id }).update({
+      is_active: false,
+      updated_at: db.fn.now(),
+    });
 
-    return res.status(200).json({ message: "Category deleted" });
+    const category = await db("categories").where({ id: existing.id }).first();
+
+    return res.status(200).json({
+      message: "Category deleted",
+      category,
+    });
   } catch {
     return res.status(500).json({ error: "Something went wrong" });
   }

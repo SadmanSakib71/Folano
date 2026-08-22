@@ -5,6 +5,7 @@ import db from "./config/database";
 import authRoutes from "./routes/authRoutes";
 import productRoutes from "./routes/productRoutes";
 import adminProductRoutes from "./routes/adminProductRoutes";
+import adminCategoryRoutes from "./routes/adminCategoryRoutes";
 import categoryRoutes from "./routes/categoryRoutes";
 import orderRoutes from "./routes/orderRoutes";
 import preorderBatchRoutes from "./routes/preorderBatchRoutes";
@@ -28,6 +29,7 @@ app.get("/health", (_req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/admin/products", adminProductRoutes);
+app.use("/api/admin/categories", adminCategoryRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/preorder-batches", preorderBatchRoutes);
