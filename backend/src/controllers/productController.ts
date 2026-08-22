@@ -42,6 +42,15 @@ export async function getAllProducts(req: Request, res: Response) {
   }
 }
 
+export async function getAdminProducts(_req: Request, res: Response) {
+  try {
+    const products = await productsWithCategory();
+    return res.json(products);
+  } catch {
+    return res.status(500).json({ error: "Something went wrong" });
+  }
+}
+
 export async function getProductById(req: Request, res: Response) {
   try {
     const product = await productsWithCategory()
