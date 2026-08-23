@@ -720,3 +720,127 @@ export async function updatePaymentStatus(req: Request, res: Response) {
     return res.status(500).json({ message: "Something went wrong" });
   }
 }
+
+// This endpoint gives admins a queue of customer-submitted payment claims waiting for verification.
+export async function getPendingPaymentClaims(req: Request, res: Response) {
+  try {
+    const orders = await db("orders")
+      .join("users", "orders.user_id", "users.id")
+      .whereNotNull("orders.payment_submitted_at")
+      .whereNot("orders.payment_status", "paid")
+      .select(
+        "orders.id",
+        "orders.user_id",
+        "orders.order_code",
+        "users.name as customer_name",
+        "users.phone as customer_phone",
+        "orders.order_type",
+        "orders.status",
+        "orders.payment_status",
+        "orders.address_text",
+        "orders.delivery_charge",
+        "orders.subtotal",
+        "orders.total_amount",
+        "orders.bkash_number_used",
+        "orders.bkash_trx_last_digits",
+        "orders.payment_submitted_at",
+        "orders.payment_confirmed_at",
+        "orders.expected_delivery_date",
+        "orders.created_at"
+      )
+      .orderBy("orders.payment_submitted_at", "asc");
+
+    const items = await fetchOrderItems(
+      db,
+      orders.map((order) => order.id)
+    );
+
+    return res.status(200).json(attachItemsToOrders(orders, items));
+  } catch {
+    return res.status(500).json({ error: "Something went wrong" });
+  }
+}
+
+export async function confirmPayment(req: Request, res: Response) {
+  try {
+    const orderId = parseOrderId(req.params.id);
+
+    if (orderId === null) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+
+    const existing: OrderRow | undefined = await db("orders").where({ id: orderId }).first();
+
+    if (!existing) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+
+    if (existing.payment_status === "paid") {
+      return res.status(400).json({ error: "পেমেন্ট ইতিমধ্যে নিশ্চিত করা হয়েছে" });
+    }
+
+    if (existing.payment_submitted_at == null) {
+      return res.status(400).json({ error: "এই অর্ডারের কোনো পেমেন্ট ক্লেইম নেই" });
+    }
+
+    // Preorders only collect the delivery charge up front, so confirmation
+    // marks them partial. Normal orders pay the full amount, so they become paid.
+    const paymentStatus = existing.order_type === "preorder" ? "partial" : "paid";
+    const nextStatus = existing.status === "pending" ? "confirmed" : existing.status;
+
+    await db("orders").where({ id: orderId }).update({
+      payment_status: paymentStatus,
+      status: nextStatus,
+      payment_confirmed_at: db.fn.now(),
+    });
+
+    const order = await getOrderWithItems(db, orderId);
+
+    return res.status(200).json({ order });
+  } catch {
+    return res.status(500).json({ error: "Something went wrong" });
+  }
+}
+
+export async function rejectPaymentClaim(req: Request, res: Response) {
+  try {
+    const orderId = parseOrderId(req.params.id);
+
+    if (orderId === null) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+
+    const existing: OrderRow | undefined = await db("orders").where({ id: orderId }).first();
+
+    if (!existing) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+
+    if (existing.payment_submitted_at == null) {
+      return res.status(400).json({ error: "এই অর্ডারের কোনো পেমেন্ট ক্লেইম নেই" });
+    }
+
+    if (existing.payment_status === "paid") {
+      return res.status(400).json({ error: "পেমেন্ট ইতিমধ্যে নিশ্চিত করা হয়েছে" });
+    }
+
+    const reason = req.body?.reason;
+
+    if (typeof reason === "string" && reason.trim() !== "") {
+      console.log(`Payment claim rejected for order ${orderId}: ${reason}`);
+    }
+
+    await db("orders").where({ id: orderId }).update({
+      bkash_number_used: null,
+      bkash_trx_last_digits: null,
+      payment_submitted_at: null,
+      payment_status: "unpaid",
+    });
+
+    const order = await getOrderWithItems(db, orderId);
+
+    return res.status(200).json({ order });
+  } catch {
+    return res.status(500).json({ error: "Something went wrong" });
+  }
+}
