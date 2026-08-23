@@ -78,6 +78,7 @@ function normalizeBatch(raw: unknown): PreorderBatch | null {
   }
 }
 
+// Omit status to load every batch (admin). Storefront passes "open".
 export async function getPreorderBatches(status?: string) {
   const response = await api.get('/preorder-batches', {
     params: status ? { status } : undefined,
