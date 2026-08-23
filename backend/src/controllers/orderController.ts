@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import type { Knex } from "knex";
 import db from "../config/database";
+import { generateOrderCode, isUniqueConstraintError } from "../utils/orderCode";
 
 class OrderError extends Error {
   statusCode: number;
@@ -15,6 +16,7 @@ class OrderError extends Error {
 type OrderRow = {
   id: number;
   user_id: number;
+  order_code: string;
   address_text: string;
   order_type: string;
   status: string;
@@ -22,6 +24,10 @@ type OrderRow = {
   delivery_charge: string | number;
   total_amount: string | number;
   payment_status: string;
+  bkash_number_used: string | null;
+  bkash_trx_last_digits: string | null;
+  payment_submitted_at: string | Date | null;
+  payment_confirmed_at: string | Date | null;
   expected_delivery_date: string | Date | null;
   created_at: string | Date;
   updated_at: string | Date;
@@ -65,6 +71,10 @@ function isAllowedPaymentStatus(value: unknown): value is AllowedPaymentStatus {
   return (
     typeof value === "string" && ALLOWED_PAYMENT_STATUSES.includes(value as AllowedPaymentStatus)
   );
+}
+
+function isExactlyThreeDigits(value: unknown): value is string {
+  return typeof value === "string" && /^\d{3}$/.test(value);
 }
 
 function parseOrderId(value: string | string[]): number | null {
@@ -203,6 +213,40 @@ async function getOrderWithItems(conn: Knex | Knex.Transaction, orderId: number)
   return attachItemsToOrders([order], items)[0];
 }
 
+// order_code is generated here so customers can quote a short reference
+// (e.g. FS-2K9X7) on WhatsApp or in a bKash payment note.
+async function insertOrderWithUniqueCode(
+  trx: Knex.Transaction,
+  data: Record<string, unknown>
+): Promise<number> {
+  const maxAttempts = 5;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const orderCode = generateOrderCode();
+    const existing = await trx("orders").where({ order_code: orderCode }).first("id");
+
+    if (existing) {
+      continue;
+    }
+
+    try {
+      const [created] = await trx("orders")
+        .insert({ ...data, order_code: orderCode })
+        .returning("id");
+      return created.id as number;
+    } catch (error) {
+      // Two requests can theoretically generate the same code; retry with a new one.
+      if (isUniqueConstraintError(error) && attempt < maxAttempts - 1) {
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  throw new OrderError(500, "Could not generate a unique order code");
+}
+
 export async function createOrder(req: Request, res: Response) {
   try {
     if (!req.user) {
@@ -277,22 +321,20 @@ export async function createOrder(req: Request, res: Response) {
 
       const totalAmount = orderSubtotal + parsedDeliveryCharge;
 
-      const [created] = await trx("orders")
-        .insert({
-          user_id: userId,
-          address_text: address_text.trim(),
-          order_type: "normal",
-          status: "pending",
-          subtotal: orderSubtotal,
-          delivery_charge: parsedDeliveryCharge,
-          total_amount: totalAmount,
-          payment_status: "unpaid",
-        })
-        .returning("id");
+      const createdId = await insertOrderWithUniqueCode(trx, {
+        user_id: userId,
+        address_text: address_text.trim(),
+        order_type: "normal",
+        status: "pending",
+        subtotal: orderSubtotal,
+        delivery_charge: parsedDeliveryCharge,
+        total_amount: totalAmount,
+        payment_status: "unpaid",
+      });
 
       await trx("order_items").insert(
         preparedItems.map((item) => ({
-          order_id: created.id,
+          order_id: createdId,
           product_id: item.product_id,
           quantity: item.quantity,
           unit_price: item.unit_price,
@@ -316,7 +358,7 @@ export async function createOrder(req: Request, res: Response) {
         }
       }
 
-      return created.id as number;
+      return createdId;
     });
 
     const order = await getOrderWithItems(db, orderId);
@@ -406,22 +448,20 @@ export async function createPreorder(req: Request, res: Response) {
       const subtotal = parsedQuantity * Number(batch.price_per_unit);
       const totalAmount = deliveryCharge;
 
-      const [created] = await trx("orders")
-        .insert({
-          user_id: userId,
-          address_text: address_text.trim(),
-          order_type: "preorder",
-          status: "pending",
-          subtotal,
-          delivery_charge: deliveryCharge,
-          total_amount: totalAmount,
-          payment_status: "unpaid",
-          expected_delivery_date: batch.expected_delivery_date,
-        })
-        .returning("id");
+      const createdId = await insertOrderWithUniqueCode(trx, {
+        user_id: userId,
+        address_text: address_text.trim(),
+        order_type: "preorder",
+        status: "pending",
+        subtotal,
+        delivery_charge: deliveryCharge,
+        total_amount: totalAmount,
+        payment_status: "unpaid",
+        expected_delivery_date: batch.expected_delivery_date,
+      });
 
       await trx("order_items").insert({
-        order_id: created.id,
+        order_id: createdId,
         product_id: batch.product_id,
         batch_id: batchId,
         quantity: parsedQuantity,
@@ -441,7 +481,7 @@ export async function createPreorder(req: Request, res: Response) {
         throw new OrderError(400, "Not enough quantity available");
       }
 
-      return created.id as number;
+      return createdId;
     });
 
     const order = await getOrderWithItems(db, orderId);
@@ -452,6 +492,58 @@ export async function createPreorder(req: Request, res: Response) {
       return res.status(error.statusCode).json({ error: error.message });
     }
 
+    return res.status(500).json({ error: "Something went wrong" });
+  }
+}
+
+// The customer is only submitting proof of payment here.
+// payment_status stays unpaid until an admin manually verifies and confirms it.
+// payment_submitted_at is set so we know a claim exists, without marking the order paid.
+export async function submitPaymentClaim(req: Request, res: Response) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const { order_id, bkash_number_used, bkash_trx_last_digits } = req.body;
+    const orderId = toFiniteNumber(order_id);
+
+    if (orderId === null || !Number.isInteger(orderId) || orderId <= 0) {
+      return res.status(400).json({ error: "order_id is required and must be a valid order id" });
+    }
+
+    const order: OrderRow | undefined = await db("orders").where({ id: orderId }).first();
+
+    if (!order) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+
+    if (order.user_id !== req.user.id) {
+      return res.status(403).json({ error: "You do not have access to this order" });
+    }
+
+    if (typeof bkash_number_used !== "string" || bkash_number_used.trim() === "") {
+      return res.status(400).json({ error: "bkash_number_used is required" });
+    }
+
+    if (!isExactlyThreeDigits(bkash_trx_last_digits)) {
+      return res.status(400).json({
+        error: "bkash_trx_last_digits must be exactly 3 numeric digits",
+      });
+    }
+
+    // Only the payment-claim fields change. Totals, items, stock, status, and
+    // payment_status stay the same. payment_confirmed_at is left untouched.
+    await db("orders").where({ id: orderId }).update({
+      bkash_number_used: bkash_number_used.trim(),
+      bkash_trx_last_digits,
+      payment_submitted_at: db.fn.now(),
+    });
+
+    const updated = await getOrderWithItems(db, orderId);
+
+    return res.status(200).json({ order: updated });
+  } catch {
     return res.status(500).json({ error: "Something went wrong" });
   }
 }
