@@ -7,6 +7,7 @@ import MainLayout from './components/layout/MainLayout'
 import AdminCategories from './pages/admin/Categories'
 import AdminDashboard from './pages/admin/Dashboard'
 import AdminOrders from './pages/admin/Orders'
+import AdminPayments from './pages/admin/Payments'
 import AdminPreorderBatches from './pages/admin/PreorderBatches'
 import AdminProducts from './pages/admin/Products'
 import Cart from './pages/Cart'
@@ -44,6 +45,7 @@ function App() {
                 <Route path="products" element={<AdminProducts />} />
                 <Route path="categories" element={<AdminCategories />} />
                 <Route path="orders" element={<AdminOrders />} />
+                <Route path="payments" element={<AdminPayments />} />
                 <Route path="preorder-batches" element={<AdminPreorderBatches />} />
               </Route>
             </Route>

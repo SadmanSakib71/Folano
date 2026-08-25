@@ -4,6 +4,7 @@ import {
   Package,
   Layers,
   ClipboardList,
+  Wallet,
   CalendarClock,
   ExternalLink,
   LogOut,
@@ -15,6 +16,7 @@ const NAV_ITEMS = [
   { to: '/admin/products', label: 'Products', icon: Package },
   { to: '/admin/categories', label: 'Categories', icon: Layers },
   { to: '/admin/orders', label: 'Orders', icon: ClipboardList },
+  { to: '/admin/payments', label: 'পেমেন্ট ভেরিফাই', icon: Wallet },
   { to: '/admin/preorder-batches', label: 'Pre-order Batches', icon: CalendarClock },
 ] as const
 
