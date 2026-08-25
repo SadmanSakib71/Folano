@@ -60,6 +60,7 @@ export interface OrderItem {
 export interface Order {
   id: number
   user_id: number
+  order_code?: string
   address_text: string
   order_type: string
   status: string

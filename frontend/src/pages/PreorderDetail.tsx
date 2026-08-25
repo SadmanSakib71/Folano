@@ -1,12 +1,17 @@
 import axios from 'axios'
-import { CheckCircle2, Minus, Plus, ShoppingBasket } from 'lucide-react'
-import { useEffect, useState, type FormEvent } from 'react'
+import { Minus, Plus, ShoppingBasket } from 'lucide-react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import {
+  parseCreatedOrder,
+  type CreatedOrder,
+} from '../api/orders'
 import {
   createPreorder,
   getPreorderBatchById,
   getPreorderErrorMessage,
 } from '../api/preorders'
+import PaymentStep from '../components/payment/PaymentStep'
 import { useAuth } from '../context/AuthContext'
 import type { PreorderBatch } from '../types'
 import {
@@ -79,7 +84,9 @@ export default function PreorderDetail() {
   const [addressText, setAddressText] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
-  const [success, setSuccess] = useState(false)
+  const [orderCreated, setOrderCreated] = useState(false)
+  const [createdOrder, setCreatedOrder] = useState<CreatedOrder | null>(null)
+  const inFlightRef = useRef(false)
 
   useEffect(() => {
     const batchId = Number(id)
@@ -101,7 +108,8 @@ export default function PreorderDetail() {
     setQuantity(1)
     setAddressText('')
     setError(null)
-    setSuccess(false)
+    setOrderCreated(false)
+    setCreatedOrder(null)
 
     getPreorderBatchById(batchId)
       .then((data) => {
@@ -134,28 +142,16 @@ export default function PreorderDetail() {
     }
   }, [id])
 
-  useEffect(() => {
-    if (!success) {
-      return
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      navigate('/orders')
-    }, 1800)
-
-    return () => window.clearTimeout(timeoutId)
-  }, [success, navigate])
-
   const unit = batch ? getBatchUnit(batch) : 'kg'
   const minQuantity = batch ? getMinQuantity(batch.available_quantity) : 1
   const isOpen = batch?.status === 'open'
   const hasStock = (batch?.available_quantity ?? 0) > 0
-  const canSubmit = Boolean(batch && isOpen && hasStock && !submitting && !success)
+  const canSubmit = Boolean(batch && isOpen && hasStock && !submitting && !orderCreated)
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    if (!batch || submitting || success) {
+    if (!batch || inFlightRef.current || submitting || orderCreated) {
       return
     }
 
@@ -187,36 +183,29 @@ export default function PreorderDetail() {
     }
 
     setError(null)
+    inFlightRef.current = true
     setSubmitting(true)
 
     try {
-      await createPreorder({
+      const data = await createPreorder({
         batch_id: batch.id,
         quantity: nextQuantity,
         address_text: address,
       })
-      setSuccess(true)
+      setCreatedOrder(parseCreatedOrder(data))
+      setOrderCreated(true)
     } catch (err) {
       setError(getPreorderErrorMessage(err))
     } finally {
+      inFlightRef.current = false
       setSubmitting(false)
     }
   }
 
-  if (success) {
+  if (orderCreated) {
     return (
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
-        <div className="rounded-2xl border border-primary/10 bg-white px-6 py-16 text-center shadow-sm">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-            <CheckCircle2 className="h-8 w-8 text-primary" strokeWidth={1.5} />
-          </div>
-          <p className="mt-4 font-heading text-lg font-semibold text-text">
-            আপনার প্রি-অর্ডার সফল হয়েছে
-          </p>
-          <p className="mt-1 text-sm text-muted" role="status">
-            অর্ডার তালিকায় নিয়ে যাওয়া হচ্ছে...
-          </p>
-        </div>
+        <PaymentStep order={createdOrder} />
       </div>
     )
   }

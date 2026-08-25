@@ -1,0 +1,3 @@
+export const BKASH_NUMBER = '01700000000'
+
+export const WHATSAPP_NUMBER = '8801700000000'

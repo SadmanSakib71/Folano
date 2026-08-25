@@ -77,6 +77,15 @@ function isExactlyThreeDigits(value: unknown): value is string {
   return typeof value === "string" && /^\d{3}$/.test(value);
 }
 
+function normalizeOptionalBkashNumber(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed === "" ? null : trimmed;
+}
+
 function parseOrderId(value: string | string[]): number | null {
   const raw = Array.isArray(value) ? value[0] : value;
   const orderId = Number(raw);
@@ -522,9 +531,7 @@ export async function submitPaymentClaim(req: Request, res: Response) {
       return res.status(403).json({ error: "You do not have access to this order" });
     }
 
-    if (typeof bkash_number_used !== "string" || bkash_number_used.trim() === "") {
-      return res.status(400).json({ error: "bkash_number_used is required" });
-    }
+    const normalizedBkashNumber = normalizeOptionalBkashNumber(bkash_number_used);
 
     if (!isExactlyThreeDigits(bkash_trx_last_digits)) {
       return res.status(400).json({
@@ -534,8 +541,9 @@ export async function submitPaymentClaim(req: Request, res: Response) {
 
     // Only the payment-claim fields change. Totals, items, stock, status, and
     // payment_status stay the same. payment_confirmed_at is left untouched.
+    // bkash_number_used is optional: omitted/empty values are stored as NULL.
     await db("orders").where({ id: orderId }).update({
-      bkash_number_used: bkash_number_used.trim(),
+      bkash_number_used: normalizedBkashNumber,
       bkash_trx_last_digits,
       payment_submitted_at: db.fn.now(),
     });

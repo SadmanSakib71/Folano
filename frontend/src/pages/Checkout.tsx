@@ -1,7 +1,13 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
-import { CheckCircle2, Package } from 'lucide-react'
-import { createOrder, getOrderErrorMessage } from '../api/orders'
+import { Package } from 'lucide-react'
+import {
+  createOrder,
+  getOrderErrorMessage,
+  parseCreatedOrder,
+  type CreatedOrder,
+} from '../api/orders'
+import PaymentStep from '../components/payment/PaymentStep'
 import { DELIVERY_CHARGE } from '../constants'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
@@ -19,26 +25,16 @@ export default function Checkout() {
   const [addressText, setAddressText] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
-  const [success, setSuccess] = useState(false)
+  const [orderCreated, setOrderCreated] = useState(false)
+  const [createdOrder, setCreatedOrder] = useState<CreatedOrder | null>(null)
+  const inFlightRef = useRef(false)
 
   const total = totalPrice + DELIVERY_CHARGE
-
-  useEffect(() => {
-    if (!success) {
-      return
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      navigate('/orders')
-    }, 1800)
-
-    return () => window.clearTimeout(timeoutId)
-  }, [success, navigate])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    if (submitting || success) {
+    if (inFlightRef.current || submitting || orderCreated) {
       return
     }
 
@@ -60,10 +56,11 @@ export default function Checkout() {
     }
 
     setError(null)
+    inFlightRef.current = true
     setSubmitting(true)
 
     try {
-      await createOrder({
+      const data = await createOrder({
         address_text: address,
         delivery_charge: DELIVERY_CHARGE,
         items: items.map((item) => ({
@@ -72,29 +69,22 @@ export default function Checkout() {
         })),
       })
 
+      const parsed = parseCreatedOrder(data)
       clearCart()
-      setSuccess(true)
+      setCreatedOrder(parsed)
+      setOrderCreated(true)
     } catch (err) {
       setError(getOrderErrorMessage(err))
     } finally {
+      inFlightRef.current = false
       setSubmitting(false)
     }
   }
 
-  if (success) {
+  if (orderCreated) {
     return (
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
-        <div className="rounded-2xl border border-primary/10 bg-white px-6 py-16 text-center shadow-sm">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-            <CheckCircle2 className="h-8 w-8 text-primary" strokeWidth={1.5} />
-          </div>
-          <p className="mt-4 font-heading text-lg font-semibold text-text">
-            আপনার অর্ডার সফল হয়েছে
-          </p>
-          <p className="mt-1 text-sm text-muted" role="status">
-            অর্ডার তালিকায় নিয়ে যাওয়া হচ্ছে...
-          </p>
-        </div>
+        <PaymentStep order={createdOrder} />
       </div>
     )
   }

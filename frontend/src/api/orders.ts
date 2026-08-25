@@ -23,6 +23,90 @@ export async function getOrderById(id: number) {
   return response.data
 }
 
+export async function submitPaymentClaim(data: {
+  order_id: number
+  bkash_number_used?: string
+  bkash_trx_last_digits: string
+}) {
+  const payload: {
+    order_id: number
+    bkash_trx_last_digits: string
+    bkash_number_used?: string
+  } = {
+    order_id: data.order_id,
+    bkash_trx_last_digits: data.bkash_trx_last_digits,
+  }
+
+  const bkashNumber = data.bkash_number_used?.trim()
+
+  if (bkashNumber) {
+    payload.bkash_number_used = bkashNumber
+  }
+
+  const response = await api.post('/orders/payment-claim', payload)
+  return response.data
+}
+
+export type CreatedOrder = {
+  id: number
+  order_code: string
+  total_amount: number
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== 'object') {
+    return null
+  }
+
+  return value as Record<string, unknown>
+}
+
+function toFiniteNumber(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value
+  }
+
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value)
+
+    if (Number.isFinite(parsed)) {
+      return parsed
+    }
+  }
+
+  return null
+}
+
+export function parseCreatedOrder(data: unknown): CreatedOrder | null {
+  const root = asRecord(data)
+
+  if (!root) {
+    return null
+  }
+
+  const nested = asRecord(root.order)
+  const raw = nested ?? root
+  const id = toFiniteNumber(raw.id)
+  const orderCode = typeof raw.order_code === 'string' ? raw.order_code.trim() : ''
+  const totalAmount = toFiniteNumber(raw.total_amount)
+
+  if (
+    id === null ||
+    !Number.isInteger(id) ||
+    id <= 0 ||
+    orderCode === '' ||
+    totalAmount === null
+  ) {
+    return null
+  }
+
+  return {
+    id,
+    order_code: orderCode,
+    total_amount: totalAmount,
+  }
+}
+
 const ORDER_ERROR_MESSAGES: Record<string, string> = {
   Unauthorized: 'অর্ডার করতে লগইন করুন',
   'address_text is required and must be a non-empty string':
@@ -82,4 +166,22 @@ export function getOrderErrorMessage(error: unknown): string {
   }
 
   return 'অর্ডার সম্পন্ন করা যায়নি। আবার চেষ্টা করুন।'
+}
+
+export function getPaymentClaimErrorMessage(error: unknown): string {
+  if (axios.isAxiosError(error) && !error.response) {
+    return 'সার্ভারের সাথে সংযোগ করা যায়নি। আবার চেষ্টা করুন।'
+  }
+
+  if (axios.isAxiosError(error) && error.response?.status === 401) {
+    return 'পেমেন্ট তথ্য সাবমিট করতে লগইন করুন'
+  }
+
+  const serverError = readServerError(error)
+
+  if (serverError && /[\u0980-\u09FF]/.test(serverError)) {
+    return serverError
+  }
+
+  return 'পেমেন্ট তথ্য সাবমিট করা যায়নি। আবার চেষ্টা করুন।'
 }
