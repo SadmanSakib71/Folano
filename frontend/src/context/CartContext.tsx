@@ -198,7 +198,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const updateQuantity = useCallback((product_id: number, quantity: number) => {
     const nextQuantity = Math.floor(quantity);
 
-    // 0 or less means the shopper removed this item.
+    // 0 or Less means the shopper removed this item.
     if (nextQuantity <= 0) {
       setItems((current) =>
         current.filter((item) => item.product_id !== product_id),
