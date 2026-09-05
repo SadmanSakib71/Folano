@@ -120,7 +120,7 @@ function toCartItem(product: Product, quantity: number): CartItem {
   };
 }
 
-// Merge any duplicate product_id entries and keep quantities within stock.
+// Merge any Duplicate product_id entries and keep quantities within stock.
 function normalizeCartItems(items: CartItem[]): CartItem[] {
   const byId = new Map<number, CartItem>();
 
